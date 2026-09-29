@@ -433,3 +433,5 @@ sudo -u imgnest pm2 reload ecosystem.config.js
 ## Adding permitted sources later
 
 Add a source object in `src/config/sources.ts` and keep the image crawler/service pipeline shared. Validate permission, source terms, and redistribution rights before enabling it. V1 deliberately includes only one crawler and has no user-facing feature that triggers a crawl.
+
+<img width="1983" height="228" alt="cb152399-acd1-49d8-993c-269685bef82f" src="https://github.com/user-attachments/assets/62f54a89-f456-4eec-b0ee-272e782d014c" />
