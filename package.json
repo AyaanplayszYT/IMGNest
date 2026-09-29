@@ -1,0 +1,36 @@
+{
+  "name": "imgnest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A self-hosted image collection and REST API service",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "worker": "node dist/workers/scheduler.js",
+    "crawl": "tsx src/crawlers/cli.ts normal",
+    "crawl:test": "tsx src/crawlers/cli.ts test",
+    "crawl:dry": "tsx src/crawlers/cli.ts dry",
+    "db:init": "tsx src/scripts/db-init.ts",
+    "test": "tsx --test tests/**/*.test.ts",
+    "test:spider": "python -m unittest discover -s tests -p test_spider.py"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "ipaddr.js": "^2.2.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

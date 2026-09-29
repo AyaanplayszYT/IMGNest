@@ -1,0 +1,19 @@
+BOT_NAME = "imgnest"
+SPIDER_MODULES = ["imgnest.spiders"]
+NEWSPIDER_MODULE = "imgnest.spiders"
+
+ROBOTSTXT_OBEY = True
+CONCURRENT_REQUESTS = 1
+DOWNLOAD_DELAY = 0.5
+DOWNLOAD_TIMEOUT = 15
+RETRY_TIMES = 2
+COOKIES_ENABLED = False
+TELNETCONSOLE_ENABLED = False
+LOG_LEVEL = "INFO"
+
+DOWNLOADER_MIDDLEWARES = {
+    "imgnest.middlewares.RequestBudgetMiddleware": 50,
+}
+
+ITEM_PIPELINES = {}
+FEED_EXPORT_ENCODING = "utf-8"
