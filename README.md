@@ -2,6 +2,8 @@
 
 IMGNest is a self-hosted image API. A Scrapy spider runs in Scrapy Cloud, the Node.js worker starts it and reads its bounded image-URL results, and the Node.js VPS downloads/processes permitted images into local WebP files. API requests never scrape websites or start cloud jobs.
 
+<img width="1983" height="793" alt="0d017d95-0e2f-44a6-95d1-0553bcadf7fa" src="https://github.com/user-attachments/assets/664adc88-d139-4e39-915c-8de8870c79d3" />
+
 ## Architecture
 
 ```text
