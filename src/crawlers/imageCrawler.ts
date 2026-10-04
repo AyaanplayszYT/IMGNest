@@ -98,8 +98,7 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
       mode,
       maxItems: limits.maxItems,
       maxPages: limits.maxPages,
-      maxRequests: limits.maxRequests,
-      historicalBeforeYear: env.historicalBeforeYear
+      maxRequests: limits.maxRequests
     });
     for (const candidate of discovered.slice(0, limits.maxItems)) {
       if (result.itemsFound >= limits.maxItems || downloadCount >= limits.maxDownloads) break;
@@ -115,7 +114,7 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
         if (!['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(imageHost)
           || page?.hostname !== 'commons.wikimedia.org' || !page.pathname.startsWith('/wiki/File:')
           || !/^cc0(?:\s|$)/i.test(candidate.license || '')
-          || !['animals', 'historical'].includes(candidate.category?.toLowerCase() || '')
+          || candidate.category?.toLowerCase() !== 'animals'
           || blockedCommonsMetadata.test(metadataText)) {
           result.itemsSkipped += 1;
           console.warn('[CRAWLER] Skipped Commons item outside allowed topics or without verified CC0 metadata');

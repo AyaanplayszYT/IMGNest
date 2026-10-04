@@ -6,6 +6,7 @@ import { healthRoutes } from './routes/health';
 import { imageRoutes } from './routes/images';
 import { statsRoutes } from './routes/stats';
 import { categoryRoutes } from './routes/categories';
+import { fetchRoutes } from './routes/fetch';
 
 export async function buildServer(database?: Database.Database): Promise<FastifyInstance> {
   const db = database ?? openDatabase();
@@ -16,6 +17,7 @@ export async function buildServer(database?: Database.Database): Promise<Fastify
   await healthRoutes(app, db);
   await imageRoutes(app, db);
   await categoryRoutes(app, db);
+  await fetchRoutes(app, db);
   await statsRoutes(app, db);
   return app;
 }

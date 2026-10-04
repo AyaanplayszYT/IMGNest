@@ -90,19 +90,14 @@ class ImageSpiderTests(unittest.TestCase):
         self.assertIn("rare bird", item["description"])
         self.assertIn("Rare birds", item["tags"])
 
-        historic_html = html.replace("A rare bird in flight.", "Historic black and white railway photograph.")
-        historic_html = historic_html.replace("Rare birds", "Historical photographs")
-        historic_html = historic_html.replace("<td id=\"fileinfotpl_aut\">Author</td>", "<td id=\"fileinfotpl_date\">Date</td>")
-        historic_html = historic_html.replace("<td><a>Example Photographer</a></td>", "<td>1888</td><td id=\"fileinfotpl_aut\">Author</td><td><a>Archivist</a></td>")
-        historic = HtmlResponse(file_url, body=historic_html, encoding="utf-8")
-        historic_item = list(spider.parse_commons_file(historic, fallback={"title": "fallback"}))[0]
-        self.assertEqual(historic_item["category"], "historical")
-
         copyrighted = HtmlResponse(file_url, body=html.replace("CC0", "CC BY-SA 4.0"), encoding="utf-8")
         self.assertEqual(list(spider.parse_commons_file(copyrighted, fallback={"title": "fallback"})), [])
 
         religious = HtmlResponse(file_url, body=html.replace("Rare birds", "Jesus Christ"), encoding="utf-8")
         self.assertEqual(list(spider.parse_commons_file(religious, fallback={"title": "fallback"})), [])
+
+        non_animal = HtmlResponse(file_url, body=html.replace("Rare birds", "Railway stations").replace("A rare bird in flight.", "A train at a railway station."), encoding="utf-8")
+        self.assertEqual(list(spider.parse_commons_file(non_animal, fallback={"title": "fallback"})), [])
 
     def test_outbound_request_budget_includes_retries(self):
         middleware = RequestBudgetMiddleware()

@@ -34,7 +34,6 @@ export const env = {
   crawlerSourceName: process.env.CRAWLER_SOURCE_NAME?.trim() || 'Wikimedia Commons CC-Zero',
   crawlerSourceLicense: process.env.CRAWLER_SOURCE_LICENSE?.trim() || 'CC0 1.0',
   crawlerContactEmail: process.env.CRAWLER_CONTACT_EMAIL?.trim() || '',
-  historicalBeforeYear: positiveInt('CRAWLER_HISTORICAL_BEFORE_YEAR', 1990, 2100),
   crawler: {
     maxItems: positiveInt('CRAWLER_MAX_ITEMS', 5),
     maxDownloads: positiveInt('CRAWLER_MAX_DOWNLOADS', 5),
@@ -56,7 +55,12 @@ export const env = {
   scrapyCloudPollIntervalMs: positiveInt('SCRAPY_CLOUD_POLL_INTERVAL_MS', 1000, 10000),
   imageDownloadTimeoutMs: positiveInt('IMAGE_DOWNLOAD_TIMEOUT_MS', 15000),
   enableScheduler: enabled(process.env.ENABLE_SCHEDULER),
-  crawlerIntervalMinutes: positiveInt('CRAWLER_INTERVAL_MINUTES', 60)
+  crawlerIntervalMinutes: positiveInt('CRAWLER_INTERVAL_MINUTES', 60),
+  // Fetch endpoint rate-limiting
+  fetchRateLimitWindowMs: positiveInt('FETCH_RATE_LIMIT_WINDOW_MS', 10000), // 10 s window
+  fetchRateLimitMax: positiveInt('FETCH_RATE_LIMIT_MAX', 5),               // max 5 requests/window
+  // Public base URL used to build absolute image links (no trailing slash)
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, '')
 };
 
 export { positiveInt };

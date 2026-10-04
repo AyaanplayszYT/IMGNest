@@ -14,7 +14,7 @@ function formatBytes(bytes: number): string {
 
 export async function statsRoutes(app: FastifyInstance, db: Database.Database): Promise<void> {
   app.get('/api/stats', async () => {
-    const publicCategories = "lower(category) IN ('animals', 'historical')";
+    const publicCategories = "lower(category) = 'animals'";
     const count = db.prepare(`SELECT COUNT(*) AS total FROM images WHERE ${publicCategories}`).get() as { total: number };
     const storage = db.prepare('SELECT COALESCE(SUM(file_size), 0) AS size FROM images').get() as { size: number };
     const runs = db.prepare('SELECT COUNT(*) AS total FROM crawler_runs').get() as { total: number };

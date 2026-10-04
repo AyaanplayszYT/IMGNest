@@ -81,7 +81,7 @@ test('Scrapy Cloud client launches a bounded job, polls it, and caps returned it
     const cloud = new ScrapyCloudService({
       apiKey: 'test-cloud-secret', projectId: '123', spider: 'imgnest_images', timeoutMs: 1000, pollIntervalMs: 1
     });
-    const result = await cloud.crawl({ sourceUrl: source.url, mode: 'test', maxItems: 3, maxPages: 1, maxRequests: 2, historicalBeforeYear: 1990 });
+    const result = await cloud.crawl({ sourceUrl: source.url, mode: 'test', maxItems: 3, maxPages: 1, maxRequests: 2 });
     assert.equal(result.length, 3);
     assert.equal(result[0].url, 'https://fixtures.example.test/0.png');
     const launch = calls[0];
@@ -89,7 +89,6 @@ test('Scrapy Cloud client launches a bounded job, polls it, and caps returned it
     const form = new URLSearchParams(String(launch.init?.body));
     assert.equal(form.get('max_items'), '3');
     assert.equal(form.get('mode'), 'test');
-    assert.equal(form.get('historical_before_year'), '1990');
     for (const call of calls) {
       const headers = new Headers(call.init?.headers);
       assert.equal(headers.get('authorization'), `Basic ${Buffer.from('test-cloud-secret:').toString('base64')}`);
@@ -312,10 +311,17 @@ test('API health, pagination, search, random, detail, stats and media path prote
     assert.equal((await app.inject('/api/images?page=1&limit=101')).statusCode, 400);
     assert.equal((await app.inject('/api/images/search?q=gaming')).json().results.length, 1);
     assert.equal((await app.inject('/api/images/search?q=rare%20bird')).json().results.length, 1);
+    assert.equal((await app.inject('/api/images/search?q=rare%20bird&category=animals')).json().results.length, 1);
+    assert.equal((await app.inject('/api/images/search?q=rare%20bird&category=unclassified')).statusCode, 400);
     assert.equal((await app.inject('/api/images/search?q=jesus')).json().results.length, 0);
     assert.equal((await app.inject('/api/images/random')).statusCode, 200);
     assert.equal((await app.inject('/api/images/random?category=animals')).statusCode, 200);
-    assert.equal((await app.inject('/api/images/random?category=unclassified')).statusCode, 404);
+    assert.equal((await app.inject('/api/images/random?category=unclassified')).statusCode, 400);
+    const categories = await app.inject('/api/categories');
+    assert.equal(categories.statusCode, 200);
+    assert.equal(categories.json().categories.find((category: { name: string }) => category.name === 'animals').imageCount, 1);
+    assert.equal((await app.inject('/api/images/random?category=unclassified')).statusCode, 400);
+    assert.equal((await app.inject('/api/images/category/unclassified')).statusCode, 400);
     assert.equal((await app.inject('/api/images/1')).statusCode, 200);
     assert.equal((await app.inject('/api/images/2')).statusCode, 404);
     assert.equal((await app.inject('/api/stats')).json().totalImages, 1);

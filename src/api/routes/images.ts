@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import type { ImageRecord } from '../../services/database';
 import { resolveMediaPath } from '../../services/storage';
 
-const allowedCategorySql = "lower(category) IN ('animals', 'historical')";
-const allowedCategories = new Set(['animals', 'historical']);
+const allowedCategorySql = "lower(category) = 'animals'";
+const allowedCategories = new Set(['animals']);
 
 function publicImage(row: ImageRecord) {
   return {
@@ -58,7 +58,7 @@ export async function imageRoutes(app: FastifyInstance, db: Database.Database): 
       return reply.code(400).send({ error: 'category must contain 1 to 100 characters' });
     }
     if (typeof category === 'string' && !allowedCategories.has(category.trim().toLowerCase())) {
-      return reply.code(400).send({ error: 'category must be animals or historical' });
+      return reply.code(400).send({ error: 'category must be animals' });
     }
     const row = category
       ? db.prepare(`SELECT * FROM images WHERE ${allowedCategorySql} AND lower(category) = lower(?) ORDER BY RANDOM() LIMIT 1`).get(category.trim()) as ImageRecord | undefined
@@ -71,7 +71,7 @@ export async function imageRoutes(app: FastifyInstance, db: Database.Database): 
     const { q: query, category } = request.query as { q?: unknown; category?: unknown };
     if (typeof query !== 'string' || !query.trim() || query.length > 100) return reply.code(400).send({ error: 'q must contain 1 to 100 characters' });
     if (category !== undefined && (typeof category !== 'string' || !allowedCategories.has(category.trim().toLowerCase()))) {
-      return reply.code(400).send({ error: 'category must be animals or historical' });
+      return reply.code(400).send({ error: 'category must be animals' });
     }
     const selectedCategory = typeof category === 'string' ? category.trim() : undefined;
     return { query, category: selectedCategory ?? null, results: searchImages(db, query.trim(), 100, selectedCategory).map(publicImage) };
@@ -79,7 +79,7 @@ export async function imageRoutes(app: FastifyInstance, db: Database.Database): 
 
   app.get('/api/images/category/:category', async (request, reply) => {
     const { category } = request.params as { category: string };
-    if (!allowedCategories.has(category.trim().toLowerCase())) return reply.code(400).send({ error: 'category must be animals or historical' });
+    if (!allowedCategories.has(category.trim().toLowerCase())) return reply.code(400).send({ error: 'category must be animals' });
     const rows = db.prepare(`SELECT * FROM images WHERE ${allowedCategorySql} AND lower(category) = lower(?) ORDER BY id DESC LIMIT 100`).all(category) as ImageRecord[];
     return { category, results: rows.map(publicImage) };
   });

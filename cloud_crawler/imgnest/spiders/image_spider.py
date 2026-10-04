@@ -31,21 +31,12 @@ ANIMAL_CONTENT = re.compile(
     r"butterflies|butterfly|moth|moths|crustacean|crustaceans|mollusc|molluscs)\b",
     re.IGNORECASE,
 )
-HISTORICAL_CONTENT = re.compile(
-    r"\b(historical|historic|history|archival|archive|antique|ancient|19th century|20th century)\b",
-    re.IGNORECASE,
-)
-
-
-def classify_commons_image(title, description, author, categories, date_text, cutoff_year):
-    metadata = " ".join([title, description, author, *categories, date_text])
+def classify_commons_image(title, description, author, categories):
+    metadata = " ".join([title, description, author, *categories])
     if BLOCKED_CONTENT.search(metadata):
         return None
     if ANIMAL_CONTENT.search(metadata):
         return "animals"
-    years = [int(year) for year in re.findall(r"\b(?:18|19|20)\d{2}\b", date_text)]
-    if HISTORICAL_CONTENT.search(metadata) or any(year <= cutoff_year for year in years):
-        return "historical"
     return None
 
 
@@ -53,7 +44,7 @@ class ImageSpider(scrapy.Spider):
     """Extract a bounded list of image URLs from one configured permitted source."""
 
     name = "imgnest_images"
-    def __init__(self, source_url=None, mode="normal", max_items="5", max_pages="1", max_requests="5", contact_email="", historical_before_year="1990", **kwargs):
+    def __init__(self, source_url=None, mode="normal", max_items="5", max_pages="1", max_requests="5", contact_email="", **kwargs):
         super().__init__(**kwargs)
         if not source_url:
             raise ValueError("Pass source_url for a permitted source page")
@@ -72,7 +63,6 @@ class ImageSpider(scrapy.Spider):
         self.max_pages = min(self.max_pages, self.max_requests)
         self.request_count = 0
         self.contact_email = contact_email.strip()
-        self.historical_before_year = positive_int(historical_before_year, 1990, 2100)
         self.is_commons_category = (
             parsed.hostname.lower() == "commons.wikimedia.org"
             and parsed.path.startswith("/wiki/Category:")
@@ -192,7 +182,7 @@ class ImageSpider(scrapy.Spider):
                 "author": "",
                 "license": "CC0 1.0",
                 "attribution": f"{filename} — CC0 1.0, Wikimedia Commons: {file_page}",
-                "category": classify_commons_image(filename, "", "", [], "", self.historical_before_year),
+                "category": classify_commons_image(filename, "", "", []),
                 "tags": [],
             }
             if not entry["category"]:
@@ -230,7 +220,6 @@ class ImageSpider(scrapy.Spider):
         title = response.css("#firstHeading .mw-page-title-main::text").get()
         description = response.xpath('//*[@id="fileinfotpl_desc"]/following-sibling::td[1]//text()').getall()
         author = response.xpath('//*[@id="fileinfotpl_aut"]/following-sibling::td[1]//text()').getall()
-        date_text = response.xpath('//*[@id="fileinfotpl_date"]/following-sibling::td[1]//text()').getall()
         license_name = response.css(".licensetpl_short::text").get(default="").strip()
         if not original or "cc0" not in license_name.lower():
             self.logger.info("Skipping Commons file without verified CC0 license: %s", response.url)
@@ -243,10 +232,7 @@ class ImageSpider(scrapy.Spider):
         clean_description = self.clean_text(description)[:2000] or fallback["description"]
         clean_author = self.clean_text(author)[:300]
         clean_title = self.clean_text([title])[:200] or fallback["title"]
-        clean_date = self.clean_text(date_text)[:200]
-        topic = classify_commons_image(
-            clean_title, clean_description, clean_author, categories, clean_date, self.historical_before_year
-        )
+        topic = classify_commons_image(clean_title, clean_description, clean_author, categories)
         if not topic:
             self.logger.info("Skipping Commons file outside allowed history/animal topics or with blocked metadata: %s", response.url)
             return

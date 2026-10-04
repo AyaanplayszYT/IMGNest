@@ -18,7 +18,6 @@ export interface CloudCrawlRequest {
   maxItems: number;
   maxPages: number;
   maxRequests: number;
-  historicalBeforeYear: number;
 }
 
 interface CloudConfig {
@@ -67,8 +66,7 @@ export class ScrapyCloudService {
       mode: request.mode,
       max_items: String(request.maxItems),
       max_pages: String(request.maxPages),
-      max_requests: String(request.maxRequests),
-      historical_before_year: String(request.historicalBeforeYear)
+      max_requests: String(request.maxRequests)
     });
     const sourceHost = new URL(request.sourceUrl).hostname;
     if (sourceHost === 'commons.wikimedia.org' || sourceHost.endsWith('.commons.wikimedia.org')) {
