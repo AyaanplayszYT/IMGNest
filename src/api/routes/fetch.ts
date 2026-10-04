@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import type { ImageRecord } from '../../services/database';
 import { resolveMediaPath } from '../../services/storage';
 import { RateLimiter } from '../../services/rateLimiter';
+import { searchLiveCC0Images } from '../../services/liveSearch';
 import { env } from '../../config/env';
 
 // ------------------------------------------------------------------
@@ -43,12 +44,6 @@ function clientIp(request: FastifyRequest): string {
   return request.ip ?? 'unknown';
 }
 
-/** Get distinct category names that actually have images in the DB. */
-function getAvailableCategories(db: Database.Database): Set<string> {
-  const rows = db.prepare('SELECT DISTINCT lower(category) AS cat FROM images WHERE category != \'\'').all() as Array<{ cat: string }>;
-  return new Set(rows.map((r) => r.cat));
-}
-
 // ------------------------------------------------------------------
 // Route
 // ------------------------------------------------------------------
@@ -58,13 +53,15 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
    * GET /api/images/fetch
    *
    * Query params:
-   *   category  (required) — e.g. "birds", "animals", "cats"
+   *   category  (required) — e.g. "birds", "animals", "cats", "nature", "space"
    *   limit     (optional) — 1–5, default 1
    *
    * Designed for Discord bots: /imgnest category:birds limit:5
    *
-   * Rate limit: configurable via FETCH_RATE_LIMIT_MAX requests per
-   * FETCH_RATE_LIMIT_WINDOW_MS milliseconds per IP address.
+   * If local DB has matching images, returns them.
+   * If local DB has fewer images or is empty, performs an on-demand live
+   * search for verified CC0 images and returns them immediately without
+   * consuming local server disk space.
    */
   app.get('/api/images/fetch', async (request, reply) => {
     // ── Rate limit ──────────────────────────────────────────────────
@@ -91,13 +88,6 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
     }
 
     const categoryNorm = category.trim().toLowerCase();
-    const available = getAvailableCategories(db);
-
-    if (available.size === 0) {
-      return reply.code(404).send({
-        error: 'No images in the database yet. Trigger a crawl to populate images.'
-      });
-    }
 
     // ── Validate limit ───────────────────────────────────────────────
     const FETCH_MAX_LIMIT = 5;
@@ -112,8 +102,8 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
       }
     }
 
-    // ── Query (matches by category OR by keyword in tags/title/description) ──
-    const rows = db
+    // ── 1. Check local DB first ──────────────────────────────────────
+    const dbRows = db
       .prepare(
         `SELECT * FROM images
          WHERE lower(category) = ?
@@ -123,21 +113,38 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
       )
       .all(categoryNorm, categoryNorm, limit) as ImageRecord[];
 
-    if (rows.length === 0) {
-      return reply.code(404).send({
-        error: `No images found for "${category}". Available categories: ${[...available].sort().join(', ')}`
-      });
-    }
-
-    // ── Add absolute media URLs ──────────────────────────────────────
-    const results = rows.map((row) => {
+    const results = dbRows.map((row) => {
       const pub = publicImage(row);
-      // Resolve to an absolute path so bots can use it directly.
       const absoluteImage = resolveMediaPath(row.filename)
         ? `${env.publicBaseUrl}/media/images/${row.filename}`
-        : null;
+        : pub.originalImageUrl;
       return { ...pub, absoluteImage };
     });
+
+    // ── 2. On-demand live search if DB has fewer than requested ───────
+    if (results.length < limit) {
+      const needed = limit - results.length;
+      try {
+        const liveImages = await searchLiveCC0Images(categoryNorm, needed);
+        for (const live of liveImages) {
+          // Avoid duplicate URLs in response
+          if (!results.some((r) => r.originalImageUrl === live.originalImageUrl)) {
+            results.push({
+              ...live,
+              id: live.id ?? Math.floor(Math.random() * 1_000_000) + 100_000
+            });
+          }
+        }
+      } catch {
+        // If live search fails, proceed with whatever was found in DB
+      }
+    }
+
+    if (results.length === 0) {
+      return reply.code(404).send({
+        error: `No CC0 images found for "${category}". Try another keyword or category.`
+      });
+    }
 
     return reply.send({
       category: categoryNorm,
