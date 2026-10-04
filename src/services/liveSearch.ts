@@ -43,18 +43,20 @@ export async function searchLiveCC0Images(query: string, limit = 1): Promise<Liv
     : 'IMGNestBot/1.0 (contact@imgnest.local)';
 
   for (const q of searchTerms) {
+    const randomOffset = Math.floor(Math.random() * 25);
     const url = new URL('https://commons.wikimedia.org/w/api.php');
     url.searchParams.set('action', 'query');
     url.searchParams.set('generator', 'search');
     url.searchParams.set('gsrsearch', q);
     url.searchParams.set('gsrnamespace', '6'); // File namespace
-    url.searchParams.set('gsrlimit', String(targetLimit * 3));
+    url.searchParams.set('gsrlimit', String(Math.max(25, targetLimit * 5)));
+    url.searchParams.set('gsroffset', String(randomOffset));
     url.searchParams.set('prop', 'imageinfo');
     url.searchParams.set('iiprop', 'url|extmetadata');
     url.searchParams.set('format', 'json');
 
     try {
-      const res = await fetch(url.toString(), {
+      let res = await fetch(url.toString(), {
         headers: {
           'User-Agent': userAgent,
           'Accept': 'application/json'
@@ -64,7 +66,7 @@ export async function searchLiveCC0Images(query: string, limit = 1): Promise<Liv
 
       if (!res.ok) continue;
 
-      const data = await res.json() as {
+      let data = await res.json() as {
         query?: {
           pages?: Record<string, {
             title?: string;
@@ -77,7 +79,26 @@ export async function searchLiveCC0Images(query: string, limit = 1): Promise<Liv
         };
       };
 
-      const pages = Object.values(data.query?.pages || {});
+      let pages = Object.values(data.query?.pages || {});
+      // If random offset produced no results (e.g. narrow keyword with few items), retry without offset
+      if (pages.length === 0 && randomOffset > 0) {
+        url.searchParams.delete('gsroffset');
+        res = await fetch(url.toString(), {
+          headers: {
+            'User-Agent': userAgent,
+            'Accept': 'application/json'
+          },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (res.ok) {
+          data = await res.json() as typeof data;
+          pages = Object.values(data.query?.pages || {});
+        }
+      }
+
+      // Shuffle pages to ensure fresh variety on every query
+      pages.sort(() => Math.random() - 0.5);
+
       const results: LiveImageResult[] = [];
 
       for (const page of pages) {

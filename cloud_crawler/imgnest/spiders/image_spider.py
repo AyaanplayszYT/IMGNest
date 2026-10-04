@@ -25,8 +25,23 @@ BLOCKED_CONTENT = re.compile(
     r"gore|blood|corpse|torture|rape|suicide|self[- ]harm|graphic violence|crucifixion)\b",
     re.IGNORECASE,
 )
+
+BIRDS_CONTENT = re.compile(
+    r"\b(bird|birds|aves|avian|raptor|raptors|"
+    r"eagle|eagles|hawk|hawks|falcon|falcons|owl|owls|parrot|parrots|"
+    r"penguin|penguins|sparrow|sparrows|pigeon|pigeons|dove|doves|seagull|seagulls|"
+    r"crow|crows|raven|ravens|woodpecker|woodpeckers|hummingbird|hummingbirds|"
+    r"robin|robins|swallow|swallows|heron|herons|stork|storks|flamingo|flamingos|"
+    r"kingfisher|kingfishers|pelican|pelicans|canary|canaries|finch|finches|"
+    r"peacock|peacocks|peafowl|poultry|chicken|chickens|rooster|roosters|hen|hens|"
+    r"duck|ducks|duckling|ducklings|goose|geese|gosling|goslings|swan|swans|"
+    r"turkey|turkeys|quail|quails|partridge|pheasant|pheasants|crane|cranes|"
+    r"vulture|vultures|albatross|toucan|toucans|ostrich|ostriches|emu|emus)\b",
+    re.IGNORECASE,
+)
+
 ANIMAL_CONTENT = re.compile(
-    r"\b(animal|animals|wildlife|fauna|bird|birds|aves|mammal|mammals|reptile|reptiles|"
+    r"\b(animal|animals|wildlife|fauna|mammal|mammals|reptile|reptiles|"
     r"amphibian|amphibians|fish|fishes|insect|insects|arachnid|arachnids|spider|spiders|"
     r"butterflies|butterfly|moth|moths|crustacean|crustaceans|mollusc|molluscs|"
     r"dog|dogs|cat|cats|puppy|puppies|kitten|kittens|wolf|wolves|fox|foxes|bear|bears|lion|lions|tiger|tigers|"
@@ -34,19 +49,61 @@ ANIMAL_CONTENT = re.compile(
     r"rabbit|rabbits|hare|hares|squirrel|squirrels|hedgehog|hedgehogs|badger|otter|otters|"
     r"seal|seals|whale|whales|dolphin|dolphins|shark|sharks|snake|snakes|lizard|lizards|"
     r"turtle|turtles|tortoise|frog|frogs|toad|toads|crocodile|alligator|rodent|rodents|"
-    r"duck|ducks|goose|geese|swan|swans|eagle|eagles|hawk|hawks|falcon|falcons|owl|owls|"
-    r"parrot|parrots|penguin|penguins|sparrow|sparrows|pigeon|pigeons|dove|doves|seagull|seagulls|"
-    r"crow|crows|raven|ravens|woodpecker|hummingbird|robin|swallow|heron|stork|flamingo|"
-    r"kingfisher|pelican|canary|finch|peacock|poultry|chicken)\b",
+    r"leopard|leopards|cheetah|cheetahs|jaguar|jaguars|panther|panthers|cougar|cougars|"
+    r"hyena|hyenas|rhino|rhinos|rhinoceros|hippopotamus|hippo|hippos|camel|camels|"
+    r"llama|llamas|alpaca|alpacas|kangaroo|kangaroos|koala|koalas|panda|pandas|"
+    r"bison|buffalo|cattle|cow|cows|bull|bulls|ox|oxen|sheep|ram|rams|goat|goats|pig|pigs|swine|boar|boars)\b",
     re.IGNORECASE,
 )
+
+NATURE_CONTENT = re.compile(
+    r"\b(nature|natural|landscape|landscapes|forest|forests|woodland|woodlands|jungle|jungles|"
+    r"mountain|mountains|hill|hills|valley|valleys|canyon|canyons|cliff|cliffs|"
+    r"river|rivers|stream|streams|lake|lakes|pond|ponds|waterfall|waterfalls|"
+    r"sea|seas|ocean|oceans|beach|beaches|coast|coasts|coastline|shore|shores|"
+    r"tree|trees|flower|flowers|blossom|blossoms|plant|plants|flora|botany|botanical|"
+    r"sky|cloud|clouds|sunset|sunsets|sunrise|sunrises|sun|sunlight|sunshine|"
+    r"desert|deserts|dune|dunes|meadow|meadows|prairie|field|fields|grass|grassland|"
+    r"glacier|glaciers|iceberg|icebergs|snow|winter|autumn|spring|summer|foliage)\b",
+    re.IGNORECASE,
+)
+
+ARCHITECTURE_CONTENT = re.compile(
+    r"\b(architecture|architectural|building|buildings|bridge|bridges|castle|castles|"
+    r"palace|palaces|tower|towers|church|churches|cathedral|cathedrals|temple|temples|"
+    r"monument|monuments|house|houses|home|homes|mansion|mansions|cottage|cottages|villa|villas|"
+    r"skyscraper|skyscrapers|structure|structures|facade|facades|arch|arches|"
+    r"statue|statues|fountain|fountains|pavilion|pavilions|ruins|pyramid|pyramids|"
+    r"colosseum|amphitheater|plaza|square|street|streets|road|roads|alley|alleys|"
+    r"interior|exterior|hall|corridor|room|ceiling|dome|domes|pillar|pillars|column|columns)\b",
+    re.IGNORECASE,
+)
+
+ART_CONTENT = re.compile(
+    r"\b(art|artwork|artworks|artist|artistic|painting|paintings|painted|oil painting|watercolor|"
+    r"sculpture|sculptures|drawing|drawings|sketch|sketches|illustration|illustrations|"
+    r"engraving|engravings|etching|etchings|print|prints|woodcut|woodcuts|lithograph|lithographs|"
+    r"museum|museums|gallery|galleries|portrait|portraits|canvas|mural|murals|fresco|frescoes|"
+    r"masterpiece|fine art|artifact|artifacts|mosaic|mosaics)\b",
+    re.IGNORECASE,
+)
+
+
 def classify_commons_image(title, description, author, categories):
     metadata = " ".join([title, description, author, *categories])
     if BLOCKED_CONTENT.search(metadata):
         return None
+    if BIRDS_CONTENT.search(metadata):
+        return "birds"
     if ANIMAL_CONTENT.search(metadata):
         return "animals"
-    return None
+    if NATURE_CONTENT.search(metadata):
+        return "nature"
+    if ARCHITECTURE_CONTENT.search(metadata):
+        return "architecture"
+    if ART_CONTENT.search(metadata):
+        return "art"
+    return "general"
 
 
 class ImageSpider(scrapy.Spider):
@@ -80,7 +137,8 @@ class ImageSpider(scrapy.Spider):
             if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", self.contact_email):
                 raise ValueError("Pass a valid contact_email so Wikimedia can identify the crawler")
             query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            query.setdefault("filefrom", "A")
+            if "filefrom" not in query:
+                query["filefrom"] = random.choice(string.ascii_uppercase)
             source_url = urlunsplit(parsed._replace(query=urlencode(query)))
         self.source_url = source_url
         self.start_urls = [source_url]

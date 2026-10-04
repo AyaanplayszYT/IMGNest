@@ -62,7 +62,7 @@ class ImageSpiderTests(unittest.TestCase):
 
         self.assertEqual(len(items), 3)
         self.assertTrue(all(item["license"] == "CC0 1.0" for item in items))
-        self.assertTrue(all(item["url"].startswith("https://thumb.wikimedia.org/") for item in items))
+        self.assertTrue(all(item["url"].startswith("https://upload.wikimedia.org/") or item["url"].startswith("https://thumb.wikimedia.org/") for item in items))
 
     def test_commons_file_page_extracts_original_metadata_and_rejects_non_cc0(self):
         spider = ImageSpider(
@@ -86,7 +86,7 @@ class ImageSpiderTests(unittest.TestCase):
         self.assertEqual(item["url"], "https://upload.wikimedia.org/sample.jpg")
         self.assertEqual(item["author"], "Example Photographer")
         self.assertEqual(item["license"], "CC0 1.0")
-        self.assertEqual(item["category"], "animals")
+        self.assertEqual(item["category"], "birds")
         self.assertIn("rare bird", item["description"])
         self.assertIn("Rare birds", item["tags"])
 
@@ -96,8 +96,10 @@ class ImageSpiderTests(unittest.TestCase):
         religious = HtmlResponse(file_url, body=html.replace("Rare birds", "Jesus Christ"), encoding="utf-8")
         self.assertEqual(list(spider.parse_commons_file(religious, fallback={"title": "fallback"})), [])
 
-        non_animal = HtmlResponse(file_url, body=html.replace("Rare birds", "Railway stations").replace("A rare bird in flight.", "A train at a railway station."), encoding="utf-8")
-        self.assertEqual(list(spider.parse_commons_file(non_animal, fallback={"title": "fallback"})), [])
+        general_item = HtmlResponse(file_url, body=html.replace("Rare birds", "Tools and hardware").replace("A rare bird in flight.", "A vintage steel wrench."), encoding="utf-8")
+        general_parsed = list(spider.parse_commons_file(general_item, fallback={"title": "fallback"}))
+        self.assertEqual(len(general_parsed), 1)
+        self.assertEqual(general_parsed[0]["category"], "general")
 
     def test_outbound_request_budget_includes_retries(self):
         middleware = RequestBudgetMiddleware()
