@@ -190,6 +190,7 @@ class ImageSpider(scrapy.Spider):
                 if "/" in after:
                     clean = after.rsplit("/", 1)[0]
                     image_url = f"{parts[0]}/commons/{clean}"
+            image_url = image_url.replace("https://thumb.wikimedia.org/", "https://upload.wikimedia.org/")
             entry = {
                 "url": image_url,
                 "title": filename[:200],
