@@ -24,7 +24,7 @@ const production = process.env.NODE_ENV === 'production';
 export const env = {
   nodeEnv: production ? 'production' : 'development',
   isProduction: production,
-  port: positiveInt('PORT', 3000, 65535),
+  port: positiveInt('PORT', 25585, 65535),
   host: process.env.HOST || '0.0.0.0',
   databasePath: path.resolve(root, process.env.DATABASE_PATH || (production ? '/data/app.db' : './data/dev.db')),
   imageStoragePath: path.resolve(root, process.env.IMAGE_STORAGE_PATH || (production ? '/data/images' : './data/images')),

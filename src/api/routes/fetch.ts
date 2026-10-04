@@ -93,9 +93,9 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
     const categoryNorm = category.trim().toLowerCase();
     const available = getAvailableCategories(db);
 
-    if (!available.has(categoryNorm)) {
-      return reply.code(400).send({
-        error: `Unknown category "${category}". Available: ${[...available].sort().join(', ') || '(none yet)'}`
+    if (available.size === 0) {
+      return reply.code(404).send({
+        error: 'No images in the database yet. Trigger a crawl to populate images.'
       });
     }
 
@@ -112,18 +112,21 @@ export async function fetchRoutes(app: FastifyInstance, db: Database.Database): 
       }
     }
 
-    // ── Query ────────────────────────────────────────────────────────
+    // ── Query (matches by category OR by keyword in tags/title/description) ──
     const rows = db
       .prepare(
         `SELECT * FROM images
          WHERE lower(category) = ?
+            OR instr(lower(tags || ' ' || title || ' ' || description), ?) > 0
          ORDER BY RANDOM()
          LIMIT ?`
       )
-      .all(categoryNorm, limit) as ImageRecord[];
+      .all(categoryNorm, categoryNorm, limit) as ImageRecord[];
 
     if (rows.length === 0) {
-      return reply.code(404).send({ error: `No images found for category "${category}"` });
+      return reply.code(404).send({
+        error: `No images found for "${category}". Available categories: ${[...available].sort().join(', ')}`
+      });
     }
 
     // ── Add absolute media URLs ──────────────────────────────────────

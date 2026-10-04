@@ -110,11 +110,12 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
         try { imageHost = new URL(imageUrl).hostname.toLowerCase(); } catch { /* invalid URLs are rejected below */ }
         let page: URL | undefined;
         try { page = new URL(sourceUrl); } catch { /* invalid source page */ }
+        const allowedCrawlerCategories = new Set(['animals', 'birds', 'nature', 'architecture', 'art', 'general']);
         const metadataText = [candidate.title, candidate.description, candidate.author, candidate.attribution, ...(candidate.tags ?? [])].filter(Boolean).join(' ');
         if (!['upload.wikimedia.org', 'thumb.wikimedia.org'].includes(imageHost)
           || page?.hostname !== 'commons.wikimedia.org' || !page.pathname.startsWith('/wiki/File:')
           || !/^cc0(?:\s|$)/i.test(candidate.license || '')
-          || candidate.category?.toLowerCase() !== 'animals'
+          || !candidate.category || !allowedCrawlerCategories.has(candidate.category.toLowerCase())
           || blockedCommonsMetadata.test(metadataText)) {
           result.itemsSkipped += 1;
           console.warn('[CRAWLER] Skipped Commons item outside allowed topics or without verified CC0 metadata');

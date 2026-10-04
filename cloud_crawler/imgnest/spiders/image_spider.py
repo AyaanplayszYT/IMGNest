@@ -28,7 +28,16 @@ BLOCKED_CONTENT = re.compile(
 ANIMAL_CONTENT = re.compile(
     r"\b(animal|animals|wildlife|fauna|bird|birds|aves|mammal|mammals|reptile|reptiles|"
     r"amphibian|amphibians|fish|fishes|insect|insects|arachnid|arachnids|spider|spiders|"
-    r"butterflies|butterfly|moth|moths|crustacean|crustaceans|mollusc|molluscs)\b",
+    r"butterflies|butterfly|moth|moths|crustacean|crustaceans|mollusc|molluscs|"
+    r"dog|dogs|cat|cats|puppy|puppies|kitten|kittens|wolf|wolves|fox|foxes|bear|bears|lion|lions|tiger|tigers|"
+    r"elephant|elephants|monkey|monkeys|ape|apes|deer|horses?|zebra|zebras|giraffe|giraffes|"
+    r"rabbit|rabbits|hare|hares|squirrel|squirrels|hedgehog|hedgehogs|badger|otter|otters|"
+    r"seal|seals|whale|whales|dolphin|dolphins|shark|sharks|snake|snakes|lizard|lizards|"
+    r"turtle|turtles|tortoise|frog|frogs|toad|toads|crocodile|alligator|rodent|rodents|"
+    r"duck|ducks|goose|geese|swan|swans|eagle|eagles|hawk|hawks|falcon|falcons|owl|owls|"
+    r"parrot|parrots|penguin|penguins|sparrow|sparrows|pigeon|pigeons|dove|doves|seagull|seagulls|"
+    r"crow|crows|raven|ravens|woodpecker|hummingbird|robin|swallow|heron|stork|flamingo|"
+    r"kingfisher|pelican|canary|finch|peacock|poultry|chicken)\b",
     re.IGNORECASE,
 )
 def classify_commons_image(title, description, author, categories):
@@ -71,7 +80,7 @@ class ImageSpider(scrapy.Spider):
             if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", self.contact_email):
                 raise ValueError("Pass a valid contact_email so Wikimedia can identify the crawler")
             query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            query.setdefault("filefrom", random.choice(string.ascii_uppercase))
+            query.setdefault("filefrom", "A")
             source_url = urlunsplit(parsed._replace(query=urlencode(query)))
         self.source_url = source_url
         self.start_urls = [source_url]
@@ -174,8 +183,15 @@ class ImageSpider(scrapy.Spider):
             thumbnail = image[0].get("src") if image else None
             if not thumbnail:
                 continue
+            image_url = urljoin(response.url, thumbnail)
+            if "/commons/thumb/" in image_url:
+                parts = image_url.split("/commons/thumb/")
+                after = parts[1]
+                if "/" in after:
+                    clean = after.rsplit("/", 1)[0]
+                    image_url = f"{parts[0]}/commons/{clean}"
             entry = {
-                "url": urljoin(response.url, thumbnail),
+                "url": image_url,
                 "title": filename[:200],
                 "source_url": file_page,
                 "description": filename[:1000],
