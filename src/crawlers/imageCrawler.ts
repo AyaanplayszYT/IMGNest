@@ -198,8 +198,8 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
           break;
         }
       } finally {
-        if (downloadedPath) await removeFile(downloadedPath);
-        if (processedPath) await removeFile(processedPath);
+        if (downloadedPath) await removeFile(downloadedPath).catch(() => {});
+        if (processedPath) await removeFile(processedPath).catch(() => {});
       }
     }
     if (result.itemsFound >= limits.maxItems || downloadCount >= limits.maxDownloads) {
