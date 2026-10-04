@@ -23,6 +23,17 @@ type CrawlerOptions = {
   storageLimitBytes?: number;
 };
 
+export interface CrawlSavedImage {
+  id: number;
+  filename: string;
+  title: string;
+  category: string;
+  url: string;
+  source_url: string;
+  source_page_url: string;
+  license: string;
+}
+
 export interface CrawlResult {
   mode: CrawlMode;
   itemsFound: number;
@@ -30,6 +41,7 @@ export interface CrawlResult {
   itemsSkipped: number;
   urls: string[];
   stoppedForLimit: boolean;
+  savedImages?: CrawlSavedImage[];
 }
 
 const blockedCommonsMetadata = /\b(jesus|christ|christian(?:s|ity)?|religions?|religious|bible|biblical|church(?:es)?|worship|prayers?|saints?|nude|nudity|naked|porn|pornography|sexual|sex|erotic|genital|explicit|nsfw|mature|gore|blood|corpse|torture|rape|suicide|self[- ]harm|graphic violence|crucifixion)\b/i;
@@ -72,7 +84,8 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
   console.log(`[CRAWLER] Mode: ${mode === 'test' ? 'TEST' : mode.toUpperCase()}`);
   console.log(`[CRAWLER] Maximum items: ${limits.maxItems}`);
 
-  const result: CrawlResult = { mode, itemsFound: 0, itemsSaved: 0, itemsSkipped: 0, urls: [], stoppedForLimit: false };
+  const savedImages: CrawlSavedImage[] = [];
+  const result: CrawlResult = { mode, itemsFound: 0, itemsSaved: 0, itemsSkipped: 0, urls: [], stoppedForLimit: false, savedImages };
   const discovery = options.discovery ?? new ScrapyCloudService();
   const downloader = options.downloader ?? downloadImage;
   const processor = options.processor ?? processImage;
@@ -162,7 +175,7 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
         }
         const now = new Date().toISOString();
         try {
-          insertImage(db!, {
+          const insertedId = insertImage(db!, {
             filename: destination.filename,
             filepath: path.relative(env.imageStoragePath, destination.filepath).split(path.sep).join('/'),
             title: candidate.title?.trim() || source.name,
@@ -182,6 +195,16 @@ export async function runImageCrawler(options: CrawlerOptions): Promise<CrawlRes
             sha256: rawHash,
             created_at: now,
             updated_at: now
+          });
+          savedImages.push({
+            id: insertedId,
+            filename: destination.filename,
+            title: candidate.title?.trim() || source.name,
+            category: candidate.category?.trim() || '',
+            url: `${env.publicBaseUrl}/api/images/${insertedId}/file`,
+            source_url: imageUrl,
+            source_page_url: sourceUrl,
+            license: candidate.license?.trim() || source.license
           });
         } catch (error) {
           await fs.promises.rm(destination.filepath, { force: true });

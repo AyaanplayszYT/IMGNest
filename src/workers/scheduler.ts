@@ -1,20 +1,40 @@
 import { env } from '../config/env';
-import { runImageCrawler } from '../crawlers/imageCrawler';
+import { runImageCrawler, type CrawlResult } from '../crawlers/imageCrawler';
 
 let isRunning = false;
+let activeCrawlPromise: Promise<CrawlResult> | null = null;
 
-export async function triggerCrawl(mode: 'normal' | 'test' = 'normal'): Promise<{ started: boolean; reason?: string; mode?: string }> {
+export function isCrawlRunning(): boolean {
+  return isRunning;
+}
+
+export async function triggerCrawl(
+  mode: 'normal' | 'test' = 'normal',
+  wait = false
+): Promise<{ started: boolean; reason?: string; mode?: string; result?: CrawlResult }> {
   if (isRunning) {
     return { started: false, reason: 'A crawl is already in progress.' };
   }
   isRunning = true;
-  runImageCrawler({ mode })
+  activeCrawlPromise = runImageCrawler({ mode })
     .catch((error) => {
       console.error(`[WORKER] Crawl failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
     })
     .finally(() => {
       isRunning = false;
+      activeCrawlPromise = null;
     });
+
+  if (wait) {
+    try {
+      const result = await activeCrawlPromise;
+      return { started: true, mode, result };
+    } catch (error) {
+      return { started: false, reason: error instanceof Error ? error.message : 'Crawl failed' };
+    }
+  }
+
   return { started: true, mode };
 }
 
