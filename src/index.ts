@@ -1,6 +1,7 @@
 import { env } from './config/env';
 import { buildServer } from './api/server';
 import { ensureStorageDirectories } from './services/storage';
+import { startScheduler } from './workers/scheduler';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -42,7 +43,8 @@ async function main(): Promise<void> {
   try {
     await app.listen({ port: env.port, host: env.host });
     console.log(`  ${GREEN}ready${RESET}   http://${env.host === '0.0.0.0' ? 'localhost' : env.host}:${env.port}`);
-    console.log(`  ${DIM}health  http://${env.host === '0.0.0.0' ? 'localhost' : env.host}:${env.port}/api/health${RESET}\n`);
+    console.log(`  ${DIM}health  http://${env.host === '0.0.0.0' ? 'localhost' : env.host}:${env.port}/api/health${RESET}`);
+    startScheduler();
   } catch (error) {
     app.log.error(error);
     process.exitCode = 1;
